@@ -3,16 +3,33 @@ import time
 
 import xml.sax
 
+
 class WikiHandler(xml.sax.ContentHandler):
     def __init__(self):
         xml.sax.ContentHandler.__init__(self)
 
         # Tracks which element is currently being parsed
         self.currElem = '' 
+
         # We also track if we're inside a <revision> context which contains all
         # the text of the article
-        self.inText = False 
-        self.article = ''
+        self.resetState()
+
+    def resetState(self):
+        self.inText = False
+        self.rawtxt = ''
+
+        self.inInfobox = False
+        self.inLink = False
+        self.inCategory = False
+        self.count = 0
+
+        self.title = ''
+        self.body = ''
+        self.categories = ''
+        self.infobox = ''
+        self.references = ''
+        self.links = ''
 
     def startElement(self, name, attrs):
         '''
@@ -30,22 +47,86 @@ class WikiHandler(xml.sax.ContentHandler):
         text aggregation vars.
         '''
         if name == 'revision':
-            self.inText = False
-            print("Article text: ", self.article)
-            self.article = ''
+            self.process()
+            # print("Article text: ", self.rawtxt)
+            print(self.categories)
+            self.resetState()
 
         self.currElem = ''
 
     def characters(self, data):
         '''
-        Data inside <tags? are collected in this function
+        Data inside <tags> are collected in this function
         '''
         if self.currElem == 'title':
-            print('\n'*10,'#'*100)
+            self.title = data
+            # print('\n'*10,'#'*100)
             print("Title: ", data)
 
         if self.inText and self.currElem == 'text':
-            self.article += data
+            self.rawtxt += data
+
+    def process(self):
+        # We will go through self.rawtxt line by line
+        for line in self.rawtxt.split('\n'):
+            self.setContexts(line)
+            self.getValues(line)
+            # append preprocess(categories)
+            # append preprocess(citations)
+            # append preprocess(links)
+            # append preprocess(plaintext)
+
+    def getValues(self, line):
+        # If Category context, add the category.
+        # If it's in the infobox context, add the Infobox content and keep
+        # checking for citations. 
+        # If it's in the Link context, add the links
+        # Else, add the formatted plaintext
+
+        if self.inCategory:
+            self.categories += getCategory(line) + '\n'
+        elif self.inInfobox:
+            self.count += (line.count('{') - line.count('}'))
+            if self.count == 0:
+                self.inInfobox = False
+            self.references += getCitations(line) + '\n'
+            self.infobox += getInfobox(line) + '\n'
+        elif self.inLink:
+            self.links += getLinks(line) + '\n'
+        else:
+            self.references += getCitations(line) + '\n'
+            self.body += getPlaintext(line) + '\n'
+
+    def setContexts(self, line):
+        self.inCategory = False
+
+        # Set contexts based on what's active
+        if line.startswith('[[Category:'):
+            self.inCategory = True
+            self.inLink = False
+        elif 'External links' in line:
+            self.inLink = True
+        elif line.startswith('{{Infobox'):
+            self.inLink = False
+            if self.count == 0:
+                self.count = 2
+            self.inInfobox = True
+
+def getCategory(line):
+    PREFIX_LENGTH = 11 # length of [[Category:
+    return line[PREFIX_LENGTH:-2]
+
+def getCitations(line):
+    return ''
+
+def getInfobox(line):
+    return ''
+
+def getLinks(line):
+    return ''
+
+def getPlaintext(line):
+    return ''
 
 if __name__ == "__main__":
     
