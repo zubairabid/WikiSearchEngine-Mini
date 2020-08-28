@@ -50,7 +50,7 @@ class WikiHandler(xml.sax.ContentHandler):
             self.process()
             # print("Article text: ", self.rawtxt)
             #print(self.categories)
-            print(self.infobox)
+            print(self.links)
             self.resetState()
 
         self.currElem = ''
@@ -71,6 +71,8 @@ class WikiHandler(xml.sax.ContentHandler):
         # We will go through self.rawtxt line by line
         for line in self.rawtxt.split('\n'):
             line = line.strip()
+            if isComment(line):
+                continue
             self.setContexts(line)
             self.getValues(line)
             # append preprocess(categories)
@@ -86,19 +88,21 @@ class WikiHandler(xml.sax.ContentHandler):
         # Else, add the formatted plaintext
 
         if self.inCategory:
-            self.categories += getCategory(line) + '\n'
+            self.categories += getCategory(line)
         elif self.inInfobox:
             self.count += (line.count('{') - line.count('}'))
             if self.count == 0:
                 self.inInfobox = False
             values = getInfobox(line)
-            self.references += getCitations(values) + '\n'
+            self.references += getCitations(values)
             self.infobox += values
         elif self.inLink:
-            self.links += getLinks(line) + '\n'
+            values = getLinks(line)
+            self.references += getCitations(values)
+            self.links += getLinks(line)
         else:
-            self.references += getCitations(line) + '\n'
-            self.body += getPlaintext(line) + '\n'
+            self.references += getCitations(line)
+            self.body += getPlaintext(line)
 
     def setContexts(self, line):
         self.inCategory = False
@@ -117,9 +121,12 @@ class WikiHandler(xml.sax.ContentHandler):
         elif line.startswith('=='):
             self.inLink = False
 
+def isComment(line):
+    return line.startswith('<!--')
+
 def getCategory(line):
     PREFIX_LENGTH = 11 # length of [[Category:
-    return line[PREFIX_LENGTH:-2]
+    return line[PREFIX_LENGTH:-2] + '\n'
 
 def getCitations(line):
     return ''
@@ -140,7 +147,10 @@ def getInfobox(line):
     return returnval
 
 def getLinks(line):
-    return ''
+    if not line.startswith('=='):
+        return line + '\n'
+    else:
+        return ''
 
 def getPlaintext(line):
     return ''
