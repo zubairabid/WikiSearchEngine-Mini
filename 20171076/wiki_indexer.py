@@ -49,8 +49,9 @@ class WikiHandler(xml.sax.ContentHandler):
         if name == 'revision':
             self.process()
             # print("Article text: ", self.rawtxt)
-            #print(self.categories)
-            print(self.links)
+            # print(self.categories)
+            # print(self.links)
+            print(self.references)
             self.resetState()
 
         self.currElem = ''
@@ -128,8 +129,28 @@ def getCategory(line):
     PREFIX_LENGTH = 11 # length of [[Category:
     return line[PREFIX_LENGTH:-2] + '\n'
 
+import re
+citematch = re.compile(r'{{[Cc]ite(.+?)}}')
+
 def getCitations(line):
-    return ''
+    # if any <ref> in line, extract
+    # if any <cite> in line, extract
+    # for each reference:
+        # 
+    allrefs = citematch.findall(line)
+    cites = ''
+    for ref in allrefs:
+        citesent = ''
+        splits = ref.split('|')
+        for split in splits:
+            word = split
+            if '=' in split:
+                word = split[split.find('=')+1:]
+            word = word.strip()
+            citesent += word + ' '
+        cites += citesent + '\n'
+
+    return cites
 
 def getInfobox(line):
     # Trim the line first.
