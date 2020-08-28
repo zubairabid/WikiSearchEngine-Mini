@@ -49,7 +49,8 @@ class WikiHandler(xml.sax.ContentHandler):
         if name == 'revision':
             self.process()
             # print("Article text: ", self.rawtxt)
-            print(self.categories)
+            #print(self.categories)
+            print(self.infobox)
             self.resetState()
 
         self.currElem = ''
@@ -69,6 +70,7 @@ class WikiHandler(xml.sax.ContentHandler):
     def process(self):
         # We will go through self.rawtxt line by line
         for line in self.rawtxt.split('\n'):
+            line = line.strip()
             self.setContexts(line)
             self.getValues(line)
             # append preprocess(categories)
@@ -89,8 +91,9 @@ class WikiHandler(xml.sax.ContentHandler):
             self.count += (line.count('{') - line.count('}'))
             if self.count == 0:
                 self.inInfobox = False
-            self.references += getCitations(line) + '\n'
-            self.infobox += getInfobox(line) + '\n'
+            values = getInfobox(line)
+            self.references += getCitations(values) + '\n'
+            self.infobox += values
         elif self.inLink:
             self.links += getLinks(line) + '\n'
         else:
@@ -106,11 +109,13 @@ class WikiHandler(xml.sax.ContentHandler):
             self.inLink = False
         elif 'External links' in line:
             self.inLink = True
-        elif line.startswith('{{Infobox'):
+        elif line.startswith('{{Infobox') or line.startswith('{{infobox'):
             self.inLink = False
             if self.count == 0:
-                self.count = 2
+                self.count = 0
             self.inInfobox = True
+        elif line.startswith('=='):
+            self.inLink = False
 
 def getCategory(line):
     PREFIX_LENGTH = 11 # length of [[Category:
@@ -120,7 +125,19 @@ def getCitations(line):
     return ''
 
 def getInfobox(line):
-    return ''
+    # Trim the line first.
+    # Each infobox either starts with a |, }, or {. All else can be ignored.
+    # If |, the line after '=' should be taken
+    # If {, the line after box should be taken
+    # If }, ignore
+    returnval = ''
+    if line.startswith('|'):
+        returnval = line[line.find('=')+1:].strip() + '\n'
+    elif line.startswith('{'):
+        returnval = line[line.find(' '):].strip() + '\n'
+    else:
+        pass
+    return returnval
 
 def getLinks(line):
     return ''
