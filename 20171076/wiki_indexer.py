@@ -15,6 +15,8 @@ class WikiHandler(xml.sax.ContentHandler):
         # the text of the article
         self.resetState()
 
+        self.articlecount = 0
+
     def resetState(self):
         self.inText = False
         self.rawtxt = ''
@@ -48,10 +50,13 @@ class WikiHandler(xml.sax.ContentHandler):
         '''
         if name == 'revision':
             self.process()
-            # print("Article text: ", self.rawtxt)
-            # print(self.categories)
-            # print(self.links)
-            print(self.references)
+            self.preprocess()
+            #print("Title: ", self.title)
+            #print("Article text: \n", "-"*100, "\n", self.rawtxt)
+            #print("Infobox:\n", "-"*100, "\n", self.infobox)
+            #print("Categories:\n", "-"*100, "\n", self.categories)
+            #print("Links:\n", "-"*100, "\n", self.links)
+            #print("Refs:\n", "-"*100, "\n", self.references)
             self.resetState()
 
         self.currElem = ''
@@ -62,8 +67,9 @@ class WikiHandler(xml.sax.ContentHandler):
         '''
         if self.currElem == 'title':
             self.title = data
-            # print('\n'*10,'#'*100)
-            print("Title: ", data)
+            self.articlecount += 1
+            if self.articlecount % 1000 == 0:
+                print(self.articlecount)
 
         if self.inText and self.currElem == 'text':
             self.rawtxt += data
@@ -80,6 +86,19 @@ class WikiHandler(xml.sax.ContentHandler):
             # append preprocess(citations)
             # append preprocess(links)
             # append preprocess(plaintext)
+
+    def preprocess(self):
+        # print(word_tokenize(self.references))
+        # print('\n')
+        # print(custometoke(self.references))
+
+        # Tokenise a text
+        # Stopwordremoval, lowercasing, stemming
+        nlpwork(custometoke(self.body))
+        nlpwork(custometoke(self.infobox))
+        nlpwork(custometoke(self.categories))
+        nlpwork(custometoke(self.links))
+        nlpwork(custometoke(self.references))
 
     def getValues(self, line):
         # If Category context, add the category.
@@ -125,9 +144,35 @@ class WikiHandler(xml.sax.ContentHandler):
 def isComment(line):
     return line.startswith('<!--')
 
+from nltk.corpus import stopwords
+def notstopwords(word):
+    return not word in stopwords
+
+#import Stemmer
+#stemmer = Stemmer.Stemmer('english')
+
+def nlpwork(listofwords):
+    nonstop = list(filter(notstopwords, listofwords))
+    lowercased = list(map(lambda x: x.lower(), nonstop))
+    # stemmed = list(map(stemmer.stemWords, lowercased))
+
 def getCategory(line):
     PREFIX_LENGTH = 11 # length of [[Category:
-    return line[PREFIX_LENGTH:-2] + '\n'
+    return line[PREFIX_LENGTH:-2] + ' '
+
+from nltk.tokenize import word_tokenize
+
+def custometoke(line):
+    return re.findall(r'[\U00010000-\U0010ffff]'\
+            r'|[A-Z0-9a-z]+[A-Z0-9a-z._%+-]*@[A-Z0-9a-z]+(?:\.[A-Z0-9a-z]+)+'\
+            r'|(?<= )[$€£¥₹]?[0-9]+(?:[,.][0-9]+)*[$€£¥₹]?'\
+            r'|(?:(?:https?:\/\/(?:www.)?)|www.)[A-Z0-9a-z_-]+(?:\.[A-Z0-9a-z_\/-]+)+'\
+            #r'|(?:(?<=[^A-Za-z0-9])|^)@[A-Z0-9a-z._+]+[A-Za-z0-9_]'\
+            #r'|#[A-Za-z0-9]+(?:[\._-][A-Za-z0-9]+)*'\
+            #r'|\.{3,}'\
+            #r'|[!"#$%\&\'()*+,\-.:;<=>?@\[\\\/\]\^_`{\|}~]'\
+            r'|[A-Z]\.'\
+            r'|\w+', line)
 
 import re
 citematch = re.compile(r'{{[Cc]ite(.+?)}}')
@@ -148,7 +193,7 @@ def getCitations(line):
                 word = split[split.find('=')+1:]
             word = word.strip()
             citesent += word + ' '
-        cites += citesent + '\n'
+        cites += citesent + ' '
 
     return cites
 
@@ -160,21 +205,21 @@ def getInfobox(line):
     # If }, ignore
     returnval = ''
     if line.startswith('|'):
-        returnval = line[line.find('=')+1:].strip() + '\n'
+        returnval = line[line.find('=')+1:].strip() + ' '
     elif line.startswith('{'):
-        returnval = line[line.find(' '):].strip() + '\n'
+        returnval = line[line.find(' '):].strip() + ' '
     else:
         pass
     return returnval
 
 def getLinks(line):
     if not line.startswith('=='):
-        return line + '\n'
+        return line + ' '
     else:
         return ''
 
 def getPlaintext(line):
-    return ''
+    return line
 
 if __name__ == "__main__":
     
