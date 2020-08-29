@@ -1,8 +1,13 @@
+import re
 import sys
 import time
+import pickle
+from bisect import bisect_left
 
+import Stemmer
 import xml.sax
 
+from stopwords import st
 
 class WikiHandler(xml.sax.ContentHandler):
     def __init__(self):
@@ -16,6 +21,7 @@ class WikiHandler(xml.sax.ContentHandler):
         self.resetState()
 
         self.articlecount = 0
+        self.time = time.time()
 
     def resetState(self):
         self.inText = False
@@ -32,6 +38,74 @@ class WikiHandler(xml.sax.ContentHandler):
         self.infobox = ''
         self.references = ''
         self.links = ''
+
+    def createIndex(self):
+        global index
+        words = {}
+        for word in self.title:
+            if word in words:
+                if 'title' in words[word]:
+                    words[word]['title'] += 1
+                else:
+                    words[word]['title'] = 1
+            else:
+                words[word] = {'title': 1}
+
+        for word in self.body:
+            if word in words:
+                if 'body' in words[word]:
+                    words[word]['body'] += 1
+                else:
+                    words[word]['body'] = 1
+            else:
+                words[word] = {'body': 1}
+
+        for word in self.categories:
+            if word in words:
+                if 'cat' in words[word]:
+                    words[word]['cat'] += 1
+                else:
+                    words[word]['cat'] = 1
+            else:
+                words[word] = {'cat': 1}
+
+        for word in self.infobox:
+            if word in words:
+                if 'info' in words[word]:
+                    words[word]['info'] += 1
+                else:
+                    words[word]['info'] = 1
+            else:
+                words[word] = {'info': 1}
+
+        for word in self.references:
+            if word in words:
+                if 'ref' in words[word]:
+                    words[word]['ref'] += 1
+                else:
+                    words[word]['ref'] = 1
+            else:
+                words[word] = {'ref': 1}
+
+        for word in self.links:
+            if word in words:
+                if 'link' in words[word]:
+                    words[word]['link'] += 1
+                else:
+                    words[word]['link'] = 1
+            else:
+                words[word] = {'link': 1}
+
+        for word in words:
+            counts = words[word]
+            addon = '_'
+            for area in counts:
+                addon += area[:1] + str(counts[area])
+            if word in index:
+                index[word].append(str(self.articlecount)+addon)
+            else:
+                index[word] = [str(self.articlecount)+addon, ]
+
 
     def startElement(self, name, attrs):
         '''
@@ -51,12 +125,16 @@ class WikiHandler(xml.sax.ContentHandler):
         if name == 'revision':
             self.process()
             self.preprocess()
+
+            self.createIndex();
+            #print(index)
             #print("Title: ", self.title)
-            #print("Article text: \n", "-"*100, "\n", self.rawtxt)
+            #print("Article text: \n", "-"*100, "\n", self.body)
             #print("Infobox:\n", "-"*100, "\n", self.infobox)
             #print("Categories:\n", "-"*100, "\n", self.categories)
             #print("Links:\n", "-"*100, "\n", self.links)
             #print("Refs:\n", "-"*100, "\n", self.references)
+
             self.resetState()
 
         self.currElem = ''
@@ -68,8 +146,10 @@ class WikiHandler(xml.sax.ContentHandler):
         if self.currElem == 'title':
             self.title = data
             self.articlecount += 1
-            if self.articlecount % 1000 == 0:
+            if self.articlecount % 100 == 0:
                 print(self.articlecount)
+                print(time.time() - self.time)
+                self.time = time.time()
 
         if self.inText and self.currElem == 'text':
             self.rawtxt += data
@@ -82,23 +162,16 @@ class WikiHandler(xml.sax.ContentHandler):
                 continue
             self.setContexts(line)
             self.getValues(line)
-            # append preprocess(categories)
-            # append preprocess(citations)
-            # append preprocess(links)
-            # append preprocess(plaintext)
 
     def preprocess(self):
-        # print(word_tokenize(self.references))
-        # print('\n')
-        # print(custometoke(self.references))
-
         # Tokenise a text
         # Stopwordremoval, lowercasing, stemming
-        nlpwork(custometoke(self.body))
-        nlpwork(custometoke(self.infobox))
-        nlpwork(custometoke(self.categories))
-        nlpwork(custometoke(self.links))
-        nlpwork(custometoke(self.references))
+        self.title = nlpwork(custometoke(self.title))
+        self.body = nlpwork(custometoke(self.body))
+        self.infobox = nlpwork(custometoke(self.infobox))
+        self.categories = nlpwork(custometoke(self.categories))
+        self.links = nlpwork(custometoke(self.links))
+        self.references = nlpwork(custometoke(self.references))
 
     def getValues(self, line):
         # If Category context, add the category.
@@ -144,26 +217,37 @@ class WikiHandler(xml.sax.ContentHandler):
 def isComment(line):
     return line.startswith('<!--')
 
-from nltk.corpus import stopwords
-def notstopwords(word):
-    return not word in stopwords
+stlen = len(st)
+def notstopword(word):
+    return not word in st
 
-#import Stemmer
-#stemmer = Stemmer.Stemmer('english')
+stemmer = Stemmer.Stemmer('english')
+
+stems = {}
+
+def stemWords(words):
+    global stems
+    retl = []
+    for word in words:
+        if not word in stems:
+            stems[word] = stemmer.stemWord(word)
+        retl.append(stems[word])
+    return retl
 
 def nlpwork(listofwords):
-    nonstop = list(filter(notstopwords, listofwords))
+    listofwords = list(filter(lambda x: x != '', listofwords)) 
+    nonstop = list(filter(notstopword, listofwords))
     lowercased = list(map(lambda x: x.lower(), nonstop))
-    # stemmed = list(map(stemmer.stemWords, lowercased))
+    stemmed = stemWords(lowercased)
+    processedwords = stemmed
+    return processedwords
 
 def getCategory(line):
     PREFIX_LENGTH = 11 # length of [[Category:
     return line[PREFIX_LENGTH:-2] + ' '
 
-from nltk.tokenize import word_tokenize
-
 def custometoke(line):
-    return re.findall(r'[\U00010000-\U0010ffff]'\
+    return re.findall(#r'[\U00010000-\U0010ffff]'\
             r'|[A-Z0-9a-z]+[A-Z0-9a-z._%+-]*@[A-Z0-9a-z]+(?:\.[A-Z0-9a-z]+)+'\
             r'|(?<= )[$€£¥₹]?[0-9]+(?:[,.][0-9]+)*[$€£¥₹]?'\
             r'|(?:(?:https?:\/\/(?:www.)?)|www.)[A-Z0-9a-z_-]+(?:\.[A-Z0-9a-z_\/-]+)+'\
@@ -174,7 +258,6 @@ def custometoke(line):
             r'|[A-Z]\.'\
             r'|\w+', line)
 
-import re
 citematch = re.compile(r'{{[Cc]ite(.+?)}}')
 
 def getCitations(line):
@@ -221,6 +304,9 @@ def getLinks(line):
 def getPlaintext(line):
     return line
 
+index = {}
+
+
 if __name__ == "__main__":
     
     # Recording the start time to report on time taken
@@ -239,6 +325,9 @@ if __name__ == "__main__":
 
     handler = WikiHandler()
     xml.sax.parse(path_to_wiki_dump, handler)
+
+    with open('indout.pkl', 'wb') as f:
+        pickle.dump(index, f)
 
     # Recording the end time to report on the time taken
     time_end = time.time()
