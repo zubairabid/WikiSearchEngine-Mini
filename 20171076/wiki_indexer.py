@@ -243,6 +243,14 @@ if __name__ == "__main__":
 
     with open(path_to_inverted_index_out, 'wb') as f:
         pickle.dump(index, f)
+    #with open(path_to_inverted_index_out, 'w') as f:
+    #    for key in index:
+    #        wrt = key
+    #        for val in index[key]:
+    #            wrt += ';' + val
+    #        wrt += '\n'
+    #        f.write(wrt)
+
 
     # Recording the end time to report on the time taken
     time_end = time.time()
