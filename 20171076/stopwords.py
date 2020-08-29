@@ -667,3 +667,7 @@ st = {
         "z",
         "zero"
     }
+
+def notstopword(word):
+    return not word in st
+
