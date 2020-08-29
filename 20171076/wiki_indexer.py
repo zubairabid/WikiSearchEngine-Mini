@@ -106,7 +106,6 @@ class WikiHandler(xml.sax.ContentHandler):
             else:
                 index[word] = [str(self.articlecount)+addon, ]
 
-
     def startElement(self, name, attrs):
         '''
         We use this to start tracking any variables we want to, like setting the
@@ -157,9 +156,9 @@ class WikiHandler(xml.sax.ContentHandler):
     def process(self):
         # We will go through self.rawtxt line by line
         for line in self.rawtxt.split('\n'):
-            line = line.strip()
             if isComment(line):
                 continue
+            line = line.strip()
             self.setContexts(line)
             self.getValues(line)
 
@@ -187,13 +186,16 @@ class WikiHandler(xml.sax.ContentHandler):
             if self.count == 0:
                 self.inInfobox = False
             values = getInfobox(line)
+            re.sub(r"{{[Cc]ite(.+?)}}", "", values)
             self.references += getCitations(values)
             self.infobox += values
         elif self.inLink:
             values = getLinks(line)
+            re.sub(r"{{[Cc]ite(.+?)}}", "", values)
             self.references += getCitations(values)
             self.links += getLinks(line)
         else:
+            re.sub(r"{{[Cc]ite(.+?)}}", "", line)
             self.references += getCitations(line)
             self.body += getPlaintext(line)
 
@@ -217,13 +219,8 @@ class WikiHandler(xml.sax.ContentHandler):
 def isComment(line):
     return line.startswith('<!--')
 
-stlen = len(st)
 def notstopword(word):
     return not word in st
-
-stemmer = Stemmer.Stemmer('english')
-
-stems = {}
 
 def stemWords(words):
     global stems
@@ -257,8 +254,6 @@ def custometoke(line):
             #r'|[!"#$%\&\'()*+,\-.:;<=>?@\[\\\/\]\^_`{\|}~]'\
             r'|[A-Z]\.'\
             r'|\w+', line)
-
-citematch = re.compile(r'{{[Cc]ite(.+?)}}')
 
 def getCitations(line):
     # if any <ref> in line, extract
@@ -306,6 +301,15 @@ def getPlaintext(line):
 
 index = {}
 
+citematch = re.compile(r'{{[Cc]ite(.+?)}}')
+
+stlen = len(st)
+
+stemmer = Stemmer.Stemmer('english')
+
+stems = {}
+
+from pprint import pprint
 
 if __name__ == "__main__":
     
@@ -326,7 +330,7 @@ if __name__ == "__main__":
     handler = WikiHandler()
     xml.sax.parse(path_to_wiki_dump, handler)
 
-    with open('indout.pkl', 'wb') as f:
+    with open(path_to_inverted_index_out, 'wb') as f:
         pickle.dump(index, f)
 
     # Recording the end time to report on the time taken
