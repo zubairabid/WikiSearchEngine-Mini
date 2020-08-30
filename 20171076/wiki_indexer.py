@@ -10,7 +10,7 @@ from stopwords import st, notstopword
 from tokenizer import custometoke
 from wikitextparser import getCategory, getCitations, getInfobox, getLinks, \
         getPlaintext, isComment
-from textproc import nlpwork
+from textproc import nlppipe
 
 class WikiHandler(xml.sax.ContentHandler):
     def __init__(self):
@@ -101,7 +101,7 @@ class WikiHandler(xml.sax.ContentHandler):
 
         for word in words:
             counts = words[word]
-            addon = '_'
+            addon = ''
             for area in counts:
                 addon += area[:1] + str(counts[area])
             if word in index:
@@ -127,16 +127,7 @@ class WikiHandler(xml.sax.ContentHandler):
         if name == 'revision':
             self.process()
             self.preprocess()
-
             self.createIndex();
-            #print(index)
-            #print("Title: ", self.title)
-            #print("Article text: \n", "-"*100, "\n", self.body)
-            #print("Infobox:\n", "-"*100, "\n", self.infobox)
-            #print("Categories:\n", "-"*100, "\n", self.categories)
-            #print("Links:\n", "-"*100, "\n", self.links)
-            #print("Refs:\n", "-"*100, "\n", self.references)
-
             self.resetState()
 
         self.currElem = ''
@@ -203,24 +194,43 @@ class WikiHandler(xml.sax.ContentHandler):
     def process(self):
         # We will go through self.rawtxt line by line
         for line in self.rawtxt.split('\n'):
+            line = line.strip()
             if isComment(line):
                 continue
-            line = line.strip()
             self.setContexts(line)
             self.getValues(line)
 
     def preprocess(self):
+        global totaltoken
         # Tokenise a text
         # Stopwordremoval, lowercasing, stemming
-        self.title = nlpwork(custometoke(self.title))
-        self.body = nlpwork(custometoke(self.body))
-        self.infobox = nlpwork(custometoke(self.infobox))
-        self.categories = nlpwork(custometoke(self.categories))
-        self.links = nlpwork(custometoke(self.links))
-        self.references = nlpwork(custometoke(self.references))
+        self.title = custometoke(self.title)
+        totaltoken += len(self.title)
+        self.title = nlppipe(self.title)
+        
+        self.body = custometoke(self.body)
+        totaltoken += len(self.body)
+        self.body = nlppipe(self.body)
+
+        self.infobox = custometoke(self.infobox)
+        totaltoken += len(self.infobox)
+        self.infobox = nlppipe(self.infobox)
+
+        self.categories = custometoke(self.categories)
+        totaltoken += len(self.categories)
+        self.categories = nlppipe(self.categories)
+
+        self.links = custometoke(self.links)
+        totaltoken += len(self.links)
+        self.links = nlppipe(self.links)
+
+        self.references = custometoke(self.references)
+        totaltoken += len(self.references)
+        self.references = nlppipe(self.references)
 
 
 index = {}
+totaltoken = 0
 
 if __name__ == "__main__":
     
@@ -241,15 +251,21 @@ if __name__ == "__main__":
     handler = WikiHandler()
     xml.sax.parse(path_to_wiki_dump, handler)
 
-    with open(path_to_inverted_index_out, 'wb') as f:
-        pickle.dump(index, f)
-    #with open(path_to_inverted_index_out, 'w') as f:
-    #    for key in index:
-    #        wrt = key
-    #        for val in index[key]:
-    #            wrt += ';' + val
-    #        wrt += '\n'
-    #        f.write(wrt)
+    print(totaltoken)
+    print(len(index))
+    with open(path_to_inv_statfile_out, 'w') as f:
+        f.write(str(totaltoken) + '\n')
+        f.write(str(len(index)) + '\n')
+
+    #with open(path_to_inverted_index_out, 'wb') as f:
+    #    pickle.dump(index, f)
+    with open(path_to_inverted_index_out, 'w') as f:
+        for key in index:
+            wrt = key
+            for val in index[key]:
+                wrt += ';' + val
+            wrt += '\n'
+            f.write(wrt)
 
 
     # Recording the end time to report on the time taken

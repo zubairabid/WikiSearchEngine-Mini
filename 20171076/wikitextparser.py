@@ -29,7 +29,6 @@ def getCitations(line):
     return cites
 
 def getInfobox(line):
-    # Trim the line first.
     # Each infobox either starts with a |, }, or {. All else can be ignored.
     # If |, the line after '=' should be taken
     # If {, the line after box should be taken

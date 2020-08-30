@@ -668,6 +668,10 @@ st = {
         "zero"
     }
 
+#from nltk.corpus import stopwords
+#ss = set(stopwords.words('english'))
+
 def notstopword(word):
     return not word in st
+    #return not word in ss
 
