@@ -1,10 +1,10 @@
 from textproc import nlppipe
-import pickle
 import sys
 
 #with open('./ind.pkl', 'rb') as f:
 #    table = pickle.load(f)
 
+print("Loading the index. This will take a while...")
 path_to_inverted_index_out = sys.argv[1]
 index = {}
 with open(path_to_inverted_index_out, 'r') as f:
@@ -13,21 +13,20 @@ with open(path_to_inverted_index_out, 'r') as f:
         index[split[0]] = split[1:]
         index[split[0]][-1] = index[split[0]][-1][:-1] 
 
-term = input("Enter search term: ")
-prefix = term[:2]
-
 field = False
 fd = ''
-if prefix == 't:' or prefix == 'i:' or prefix == 'r:' or prefix == 'l:' or \
-        prefix == 'c' or prefix == 'b':
-    field = True
-    fd = prefix[0]
-    term = term[2:]
+terms = sys.argv[2:]
 
-terms = term.split(' ')
-searchterms = nlppipe(terms)
-for searchterm in searchterms:
+for term in terms:
+    if term.startswith('t:') or term.startswith('i:') or term.startswith('r:')\
+            or term.startswith('l:') or term.startswith('c:') \
+            or term.startswith('b:'):
+        field = True
+        fd = term[0]
+        term = term[2:]
+    searchterm = nlppipe([term,])
     if searchterm != []:
+        searchterm = searchterm[0]
         print("Searching for ", searchterm, " after preprocessing")
         processedterm = searchterm
         if processedterm in index:
@@ -47,3 +46,5 @@ for searchterm in searchterms:
                 print(results)
         else:
             print([])
+    else:
+        print([])
