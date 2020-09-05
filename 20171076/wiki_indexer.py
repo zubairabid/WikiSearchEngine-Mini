@@ -270,6 +270,10 @@ if __name__ == "__main__":
         f.write(str(totaltoken) + '\n')
         f.write(str(len(index)) + '\n')
 
+    with open(path_to_inverted_index_out+'dict.pkl', 'wb') as f:
+        pickle.dump(idArt, f)
+    with open(path_to_inverted_index_out+'off.pkl', 'wb') as f:
+        pickle.dump(len(index), f)
     #with open(path_to_inverted_index_out, 'wb') as f:
     #    pickle.dump(index, f)
     with open(path_to_inverted_index_out, 'w') as f:
