@@ -11,6 +11,7 @@ from tokenizer import custometoke
 from wikitextparser import getCategory, getCitations, getInfobox, getLinks, \
         getPlaintext, isComment
 from textproc import nlppipe
+from textproc import anglicise
 
 class WikiHandler(xml.sax.ContentHandler):
     def __init__(self):
@@ -125,9 +126,10 @@ class WikiHandler(xml.sax.ContentHandler):
         text aggregation vars.
         '''
         if name == 'revision':
+            self.mapIdToArticle()
             self.process()
             self.preprocess()
-            self.createIndex();
+            self.createIndex()
             self.resetState()
 
         self.currElem = ''
@@ -146,6 +148,10 @@ class WikiHandler(xml.sax.ContentHandler):
 
         if self.inText and self.currElem == 'text':
             self.rawtxt += data
+
+    def mapIdToArticle(self):
+        global idArt
+        idArt[self.articlecount] = self.title
 
     def setContexts(self, line):
         self.inCategory = False
@@ -206,30 +212,37 @@ class WikiHandler(xml.sax.ContentHandler):
         # Stopwordremoval, lowercasing, stemming
         self.title = custometoke(self.title)
         totaltoken += len(self.title)
+        self.title = anglicise(self.title)
         self.title = nlppipe(self.title)
         
         self.body = custometoke(self.body)
         totaltoken += len(self.body)
+        self.body = anglicise(self.body)
         self.body = nlppipe(self.body)
 
         self.infobox = custometoke(self.infobox)
         totaltoken += len(self.infobox)
+        self.infobox = anglicise(self.infobox)
         self.infobox = nlppipe(self.infobox)
 
         self.categories = custometoke(self.categories)
         totaltoken += len(self.categories)
+        self.categories = anglicise(self.categories)
         self.categories = nlppipe(self.categories)
 
         self.links = custometoke(self.links)
         totaltoken += len(self.links)
+        self.links = anglicise(self.links)
         self.links = nlppipe(self.links)
 
         self.references = custometoke(self.references)
         totaltoken += len(self.references)
+        self.references = anglicise(self.references)
         self.references = nlppipe(self.references)
 
 
 index = {}
+idArt = {}
 totaltoken = 0
 
 if __name__ == "__main__":
@@ -260,7 +273,7 @@ if __name__ == "__main__":
     #with open(path_to_inverted_index_out, 'wb') as f:
     #    pickle.dump(index, f)
     with open(path_to_inverted_index_out, 'w') as f:
-        for key in index:
+        for key in sorted(index.keys()):
             wrt = key
             for val in index[key]:
                 wrt += ';' + val
