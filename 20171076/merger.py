@@ -1,57 +1,73 @@
 import pickle
+import heapq
 
-z = ord('0')
-def replacenum(value, offset):
-    ret = ''
-    for i in value:
-        x = ord(i) - z
-        if x < 0 or x > 9:
-            ret = str(int(ret)+offset) + value
-            break
-        else:
-            ret += i
-            value = value[1:]
-    return ret
+def getPrefix(word):
+    if len(word) >= 2:
+        return word[:2]
+    else:
+        return word[:1]
 
-def parseLine(line, offset):
+def parseLine(line, fileno):
     split = line.split(';')
     key = split[0]
     vals = split[1:]
-    for i in range(len(vals)):
-        val = vals[i]
-        vals[i] = replacenum(val, offset)
-    return key, vals
+    return (key, vals, fileno)
 
 F_COUNT = 34
 DATA_ROOT = '../Out/'
-
+OUT_DATA_ROOT = '../Out/Index/'
 INDEX_PREFIX = 'ind'
 
 init_ind_names = [INDEX_PREFIX+str(i)+'.txt' for i in range(1,F_COUNT+1)]
 
 # Paths to indexes and dictionaries
 init_ind_paths = [DATA_ROOT+indexname for indexname in init_ind_names]
-docid_art_paths = [indexpath+'dict.pkl' for indexpath in init_ind_paths]
+docid_paths = [indexpath+'dict.pkl' for indexpath in init_ind_paths]
 
-# fetch docArt matches, and offsets
-docid_art_all = []
-docid_offset = []
-cumulative_offset = 0
-for docid_art_path in docid_art_paths:
-    with open(docid_art_path, 'rb') as f:
+# fetch docArt matches
+docids = {}
+for docid_path in docid_paths:
+    with open(docid_path, 'rb') as f:
         tmpdict = pickle.load(f)
-        cumulative_offset += list(tmpdict.keys())[-1]
-    
-        docid_art_all.append(tmpdict)
-        docid_offset.append(cumulative_offset)
+        docids = {**docids, **tmpdict}
 
-# Update docid-article matches
-for i in range(1, F_COUNT):
-    offset = docid_offset[i-1]
-    for old_key in docid_art_all[i].keys():
-        docid_art_all[i][old_key+offset] = docid_art_all[i].pop(old_key)
+with open(OUT_DATA_ROOT+'mapping.pkl', 'wb') as f:
+    pickle.save(docids, f)
 
 # Make a list of all filepointers
 init_ind_fps = []
 for init_ind_path in init_ind_paths:
     init_ind_fps.append(open(init_ind_path, 'r'))
+
+# Load all FPs in heap once
+min_heap = []
+for fno, fp in enumerate(init_ind_fps):
+    line = fp.readline()
+    if not line:
+        continue
+    heapq.heappush(min_heap, parseLine(line, fno))
+
+# M E R G E
+activeindex = {}
+activeprefix = ''
+while len(h) > 0:
+    word = heapq.heappop(min_heap)
+
+    # Add next line to the heap
+    line = init_ind_fps[word[2]].readline()
+    if line:
+        heapq.heappush(min_heap, parseLine(line, word[2]))
+
+    prefix = getPrefix(word[0])
+    if prefix != activeprefix:
+        if activeprefix != '':
+            with open(OUT_DATA_ROOT+prefix+'.pkl', 'wb') as f:
+                pickle.save(activeindex, f)
+        activeprefix = prefix
+    else:
+        activeindex = {}
+
+    if word[0] in activeindex.keys():
+        activeindex[word[0]] += word[1]
+    else:
+        activeindex[word[0]] = word[1]

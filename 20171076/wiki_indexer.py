@@ -129,6 +129,8 @@ class WikiHandler(xml.sax.ContentHandler):
         We use this function to reset all trackers, like the current element and
         text aggregation vars.
         '''
+        if name == 'id':
+            self.inID = False
         if name == 'revision':
             self.mapIdToArticle()
             self.process()

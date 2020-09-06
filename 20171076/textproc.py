@@ -17,7 +17,7 @@ def anglicise(listofwords):
     newlist = ['']*len(listofwords)
     for i, word in enumerate(listofwords):
         nfkd_form = unicodedata.normalize('NFKD', word)
-        nword = u"".join([c for c in nfkd_form if not unicodedata.combining(c)])
+        nword = u"".join([c for c in nfkd_form if not (unicodedata.combining(c) or ord(c) > 128)])
         newlist[i] = nword
     return newlist
 
