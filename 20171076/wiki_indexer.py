@@ -29,6 +29,7 @@ class WikiHandler(xml.sax.ContentHandler):
 
     def resetState(self):
         self.inText = False
+        self.inID = False
         self.rawtxt = ''
 
         self.inInfobox = False
@@ -42,6 +43,7 @@ class WikiHandler(xml.sax.ContentHandler):
         self.infobox = ''
         self.references = ''
         self.links = ''
+        self.articleID = ''
 
     def createIndex(self):
         global index
@@ -106,9 +108,9 @@ class WikiHandler(xml.sax.ContentHandler):
             for area in counts:
                 addon += area[:1] + str(counts[area])
             if word in index:
-                index[word].append(str(self.articlecount)+addon)
+                index[word].append(str(self.articleID)+addon)
             else:
-                index[word] = [str(self.articlecount)+addon, ]
+                index[word] = [str(self.articleID)+addon, ]
 
     def startElement(self, name, attrs):
         '''
@@ -116,6 +118,8 @@ class WikiHandler(xml.sax.ContentHandler):
         current element, and enabling aggregation of text
         '''
         self.currElem = name
+        if name == 'id' and not self.inText:
+            self.inID = True
 
         if name == 'revision':
             self.inText = True
@@ -141,17 +145,21 @@ class WikiHandler(xml.sax.ContentHandler):
         if self.currElem == 'title':
             self.title = data
             self.articlecount += 1
-            if self.articlecount % 100 == 0:
+            if self.articlecount % 10000 == 0:
+                print(path_to_inv_statfile_out)
                 print(self.articlecount)
                 print(time.time() - self.time)
                 self.time = time.time()
+        
+        if self.inID:
+            self.articleID = data
 
         if self.inText and self.currElem == 'text':
             self.rawtxt += data
 
     def mapIdToArticle(self):
         global idArt
-        idArt[self.articlecount] = self.title
+        idArt[self.articleID] = self.title
 
     def setContexts(self, line):
         self.inCategory = False
@@ -264,16 +272,17 @@ if __name__ == "__main__":
     handler = WikiHandler()
     xml.sax.parse(path_to_wiki_dump, handler)
 
+    print('*'*100)
+    print(path_to_inv_statfile_out)
     print(totaltoken)
     print(len(index))
+    print('*'*100)
     with open(path_to_inv_statfile_out, 'w') as f:
         f.write(str(totaltoken) + '\n')
         f.write(str(len(index)) + '\n')
 
     with open(path_to_inverted_index_out+'dict.pkl', 'wb') as f:
         pickle.dump(idArt, f)
-    with open(path_to_inverted_index_out+'off.pkl', 'wb') as f:
-        pickle.dump(len(index), f)
     #with open(path_to_inverted_index_out, 'wb') as f:
     #    pickle.dump(index, f)
     with open(path_to_inverted_index_out, 'w') as f:
