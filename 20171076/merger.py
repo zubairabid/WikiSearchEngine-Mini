@@ -2,7 +2,9 @@ import pickle
 import heapq
 
 def getPrefix(word):
-    if len(word) >= 2:
+    if len(word) >= 3:
+        return word[:3]
+    elif len(word) >= 2:
         return word[:2]
     else:
         return word[:1]
@@ -11,6 +13,7 @@ def parseLine(line, fileno):
     split = line.split(';')
     key = split[0]
     vals = split[1:]
+    vals[-1] = vals[-1][:-1]
     return (key, vals, fileno)
 
 F_COUNT = 34
@@ -32,7 +35,7 @@ for docid_path in docid_paths:
         docids = {**docids, **tmpdict}
 
 with open(OUT_DATA_ROOT+'mapping.pkl', 'wb') as f:
-    pickle.save(docids, f)
+    pickle.dump(docids, f)
 
 # Make a list of all filepointers
 init_ind_fps = []
@@ -50,7 +53,7 @@ for fno, fp in enumerate(init_ind_fps):
 # M E R G E
 activeindex = {}
 activeprefix = ''
-while len(h) > 0:
+while len(min_heap) > 0:
     word = heapq.heappop(min_heap)
 
     # Add next line to the heap
@@ -62,9 +65,8 @@ while len(h) > 0:
     if prefix != activeprefix:
         if activeprefix != '':
             with open(OUT_DATA_ROOT+prefix+'.pkl', 'wb') as f:
-                pickle.save(activeindex, f)
+                pickle.dump(activeindex, f)
         activeprefix = prefix
-    else:
         activeindex = {}
 
     if word[0] in activeindex.keys():
