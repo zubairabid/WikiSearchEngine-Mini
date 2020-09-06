@@ -1,6 +1,7 @@
-from merger import getPrefix, parseLine
+from otherproc import getPrefix, parseLine
 from textproc import nlppipe
 import pickle
+import time
 import math
 import sys
 import re
@@ -28,9 +29,12 @@ path_to_searchfile = sys.argv[1]
 with open(path_to_searchfile, 'r') as f:
     searches = f.readlines()
 
+print("loading mapping")
+t = time.time()
 path_to_mapping = '../Out/Index/mapping.pkl'
 with open(path_to_mapping, 'rb') as f:
     mapping = pickle.load(f)
+print("mapping loaded", time.time()-t)
 
 N_doc = len(mapping)
 
@@ -44,9 +48,10 @@ N_doc = len(mapping)
         # index[split[0]][-1] = index[split[0]][-1][:-1] 
 
 for search in searches:
-    search = search.split(' ')
+    search = search[:-1]
+    search = search.split(', ')
     k = int(search[0])
-    terms = search[1:]
+    terms = search[1].split(' ')
 
     field = False
     fd = ''
@@ -64,6 +69,7 @@ for search in searches:
         if searchterm == []:
             pass # No result for this
         else:
+            t = time.time()
             searchterm = searchterm[0]
             prefix = getPrefix(searchterm)
 
@@ -89,6 +95,12 @@ for search in searches:
                         n_app = len(term_results)
                         term_results_tf = [(tf_idf(res, n_app), res) for res in term_results]
                     break
-            term_results_tf.sort(reverse=True)
-            print(term_results_tf)
+                term_results_tf.sort(reverse=True)
+                print(term_results_tf[:k])
+                for i in range(k):
+                    if i < len(term_results_tf):
+                        print(term_results_tf[i][0], end=' ')
+                        articleid = re.findall(r'[0-9]+|[a-z]', term_results_tf[i][1])[0]
+                        print(mapping[articleid])
+            print(time.time() - t)
 

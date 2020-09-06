@@ -1,20 +1,7 @@
 import pickle
 import heapq
 
-def getPrefix(word):
-    if len(word) >= 3:
-        return word[:3]
-    elif len(word) >= 2:
-        return word[:2]
-    else:
-        return word[:1]
-
-def parseLine(line, fileno):
-    split = line.split(';')
-    key = split[0]
-    vals = split[1:]
-    vals[-1] = vals[-1][:-1]
-    return (key, vals, fileno)
+from otherproc import getPrefix, parseLine
 
 F_COUNT = 34
 DATA_ROOT = '../Out/'
@@ -29,6 +16,7 @@ docid_paths = [indexpath+'dict.pkl' for indexpath in init_ind_paths]
 
 # fetch docArt matches
 docids = {}
+print("creating mappings")
 for docid_path in docid_paths:
     with open(docid_path, 'rb') as f:
         tmpdict = pickle.load(f)
@@ -36,6 +24,7 @@ for docid_path in docid_paths:
 
 with open(OUT_DATA_ROOT+'mapping.pkl', 'wb') as f:
     pickle.dump(docids, f)
+print("mappings created")
 
 # Make a list of all filepointers
 init_ind_fps = []
@@ -53,6 +42,7 @@ for fno, fp in enumerate(init_ind_fps):
 # M E R G E
 activeindex = {}
 activeprefix = ''
+tmp = 0
 while len(min_heap) > 0:
     word = heapq.heappop(min_heap)
 
@@ -64,8 +54,16 @@ while len(min_heap) > 0:
     prefix = getPrefix(word[0])
     if prefix != activeprefix:
         if activeprefix != '':
-            with open(OUT_DATA_ROOT+prefix+'.pkl', 'wb') as f:
-                pickle.dump(activeindex, f)
+            with open(OUT_DATA_ROOT+activeprefix+'.txt', 'w') as f:
+                for key in activeindex:
+                    wrt = key
+                    for val in activeindex[key]:
+                        wrt += ';' + val
+                    wrt += '\n'
+                    f.write(wrt)
+            tmp += 1
+            if tmp % 1000 == 0:
+                print(activeprefix, ' indexed')
         activeprefix = prefix
         activeindex = {}
 
