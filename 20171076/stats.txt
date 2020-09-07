@@ -1,3 +1,3 @@
 Index size: 12.6 GB
 No. of intermediate files: 52549
-No. of tokens indexed: 35616988
+No. of tokens indexed: 25448058
