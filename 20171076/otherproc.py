@@ -2,6 +2,7 @@ def getPrefix(word):
     if len(word) >= 4:
         return word[:4]
     elif len(word) >= 3:
+    #if len(word) >= 3:
         return word[:3]
     elif len(word) >= 2:
         return word[:2]

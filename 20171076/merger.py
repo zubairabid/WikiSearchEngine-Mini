@@ -24,6 +24,11 @@ for docid_path in docid_paths:
 
 with open(OUT_DATA_ROOT+'mapping.pkl', 'wb') as f:
     pickle.dump(docids, f)
+#with open(OUT_DATA_ROOT+'mapping.txt', 'w') as f:
+#    for key in docids:
+#        wrt = key
+#        wrt = wrt + ';' + docids[key] + '\n'
+#        f.write(wrt)
 print("mappings created")
 
 # Make a list of all filepointers

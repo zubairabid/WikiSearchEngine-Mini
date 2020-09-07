@@ -6,6 +6,9 @@ import math
 import sys
 import re
 
+def get_id(res):
+    return re.findall(r'[0-9]+|[a-z]', res)[0]
+
 def is_number(s):
     try:
         int(s)
@@ -53,8 +56,12 @@ for search in searches:
     k = int(search[0])
     terms = search[1].split(' ')
 
+    all_results = []
     field = False
     fd = ''
+    
+    print('\nSearching: ', search)
+    searchtime = time.time()
 
     for term in terms:
         if term.startswith('t:') or term.startswith('i:') \
@@ -78,29 +85,48 @@ for search in searches:
             #   read it line by line until you meet the answer,
             #       for each posting check if field is satisfied, and add
             #       get tf-idf for each and sort
+
+            # Loading the index file
             with open('../Out/Index/'+prefix+'.txt', 'r') as f:
+
+                # Reading it line by line 
                 for line in f:
                     key, vals, dud = parseLine(line, 0)
                     if key != searchterm:
                         continue
+
+                    # Once the answer is found, run the search for
+                    # field/nonfield
                     if field:
                         for val in vals:
                             if fd in val:
                                 term_results.append(val)
                         n_app = len(term_results)
                         # n_app = len(vals)
-                        term_results_tf = [(tf_idf(res, n_app, True, fd), res) for res in term_results]
+                        term_results_tf = [(tf_idf(res, n_app, True, fd), get_id(res)) for res in term_results]
                     else:
                         term_results = vals
                         n_app = len(term_results)
-                        term_results_tf = [(tf_idf(res, n_app), res) for res in term_results]
+                        term_results_tf = [(tf_idf(res, n_app), get_id(res)) for res in term_results]
                     break
-                term_results_tf.sort(reverse=True)
-                print(term_results_tf[:k])
-                for i in range(k):
-                    if i < len(term_results_tf):
-                        print(term_results_tf[i][0], end=' ')
-                        articleid = re.findall(r'[0-9]+|[a-z]', term_results_tf[i][1])[0]
-                        print(mapping[articleid])
+                
+            term_results_tf.sort(reverse=True)
+            all_results.append(set([res[1] for res in term_results_tf]))
+            #print(term_results_tf[:k])
+            for i in range(k):
+                if i < len(term_results_tf):
+                    print(term_results_tf[i][0], end=' ')
+                    articleid = term_results_tf[i][1]
+                    print(mapping[articleid])
             print(time.time() - t)
+    
+    if len(all_results) > 0:
+        print("TOTAL")
+        res = set(all_results[0])
+        for termres in all_results:
+            res = res & termres
+        print(len(res))
+        for t in res:
+            print(mapping[t])
+    print("Total time: ", time.time() - searchtime)
 
