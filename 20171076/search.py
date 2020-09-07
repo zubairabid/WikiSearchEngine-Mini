@@ -63,6 +63,8 @@ for search in searches:
     
     print('\nSearching: ', search)
     searchtime = time.time()
+    finterms = [] # Keeps track of all the final terms used for search
+    tfmap = {} # Keeps track of all tf-idf scores for word-doc pairs
 
     for term in terms:
         if term.startswith('t:') or term.startswith('i:') \
@@ -79,6 +81,7 @@ for search in searches:
         else:
             t = time.time()
             searchterm = searchterm[0]
+            finterms.append(searchterm)
             prefix = getPrefix(searchterm)
 
             print("Searching for ", searchterm)
@@ -104,11 +107,19 @@ for search in searches:
                                 term_results.append(val)
                         n_app = len(term_results)
                         # n_app = len(vals)
-                        term_results_tf = [(tf_idf(res, n_app, True, fd), get_id(res)) for res in term_results]
+
+                        for res in term_results:
+                            tfidf = tf_idf(res, n_app, True, fd)
+                            term_results_tf.append((tfidf, get_id(res)))
+                            tfmap[(get_id(res), searchterm)] = tfidf
                     else:
                         term_results = vals
                         n_app = len(term_results)
-                        term_results_tf = [(tf_idf(res, n_app), get_id(res)) for res in term_results]
+
+                        for res in term_results:
+                            tfidf = tf_idf(res, n_app)
+                            term_results_tf.append((tfidf, get_id(res)))
+                            tfmap[(get_id(res), searchterm)] = tfidf
                     break
                 
             term_results_tf.sort(reverse=True)
@@ -128,7 +139,13 @@ for search in searches:
         for termres in all_results:
             res = res & termres
         print(len(res))
+        tmpresults = []
         for t in res:
-            print(mapping[t])
+            score = 0
+            for word in finterms:
+                score += tfmap[(t, word)]
+            tmpresults.append((score, mapping[t]))
+        tmpresults.sort(reverse=True)
+        print(tmpresults)
     print("Total time: ", time.time() - searchtime)
 
