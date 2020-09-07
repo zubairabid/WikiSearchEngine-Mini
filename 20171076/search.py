@@ -144,8 +144,21 @@ for search in searches:
             score = 0
             for word in finterms:
                 score += tfmap[(t, word)]
-            tmpresults.append((score, mapping[t]))
+            tmpresults.append((score, t))
         tmpresults.sort(reverse=True)
-        print(tmpresults)
+        if len(tmpresults) >= k:
+            for i in range(k):
+                print(tmpresults[i][1], mapping[tmpresults[i][1]])
+        else: # drought
+            all_results_tf.sort(reverse=True)
+            kleft = k - len(tmpresults)
+            alli = 0
+            while kleft > 0 and alli < len(all_results_tf):
+                if all_results_tf[alli][1] not in res:
+                    kleft -= 1
+                    print(all_results_tf[alli][1], mapping[all_results_tf[alli][1]])
+                alli += 1
+    else:
+        print("No results")
     print("Total time: ", time.time() - searchtime)
 
