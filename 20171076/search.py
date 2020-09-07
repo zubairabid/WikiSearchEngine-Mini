@@ -57,6 +57,7 @@ for search in searches:
     terms = search[1].split(' ')
 
     all_results = []
+    all_results_tf = []
     field = False
     fd = ''
     
@@ -112,6 +113,7 @@ for search in searches:
                 
             term_results_tf.sort(reverse=True)
             all_results.append(set([res[1] for res in term_results_tf]))
+            all_results_tf += term_results_tf
             #print(term_results_tf[:k])
             for i in range(k):
                 if i < len(term_results_tf):
