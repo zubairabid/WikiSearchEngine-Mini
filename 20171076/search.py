@@ -6,6 +6,8 @@ import math
 import sys
 import re
 
+qop = './queries_op.txt'
+
 def get_id(res):
     return re.findall(r'[0-9]+|[a-z]', res)[0]
 
@@ -128,11 +130,12 @@ for search in searches:
             #print(term_results_tf[:k])
             for i in range(k):
                 if i < len(term_results_tf):
-                    print(term_results_tf[i][0], end=' ')
+                    #print(term_results_tf[i][0], end=' ')
                     articleid = term_results_tf[i][1]
-                    print(mapping[articleid])
-            print(time.time() - t)
+                    #print(mapping[articleid])
+            print("time: ", time.time() - t)
     
+    outfile = open(qop, 'a')
     if len(all_results) > 0:
         print("TOTAL")
         res = set(all_results[0])
@@ -149,6 +152,8 @@ for search in searches:
         if len(tmpresults) >= k:
             for i in range(k):
                 print(tmpresults[i][1], mapping[tmpresults[i][1]])
+                tempasd = tmpresults[i][1] + ", " + mapping[tmpresults[i][1]] + '\n'
+                outfile.write(tempasd)
         else: # drought
             all_results_tf.sort(reverse=True)
             kleft = k - len(tmpresults)
@@ -157,8 +162,16 @@ for search in searches:
                 if all_results_tf[alli][1] not in res:
                     kleft -= 1
                     print(all_results_tf[alli][1], mapping[all_results_tf[alli][1]])
+                    tempasd = all_results_tf[alli][1] + ", " + mapping[all_results_tf[alli][1]] + '\n'
+                    outfile.write(tempasd)
+
                 alli += 1
+
     else:
         print("No results")
-    print("Total time: ", time.time() - searchtime)
+    totaltime = time.time() - searchtime
+    print("Total time: ", totaltime)
+    tempasd = str(totaltime) + ', ' + str(totaltime/k) + '\n\n'
+    outfile.write(tempasd)
+    outfile.close()
 
